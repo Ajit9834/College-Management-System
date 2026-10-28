@@ -10,10 +10,9 @@
 # production build
 /build
 
-# environment files (never commit real secrets)
-# .env.example is intentionally NOT ignored — it must contain placeholders only.
-.env
-.env*.local
+# environment files (keep the placeholder template)
+.env*
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -31,7 +30,21 @@ yarn-error.log*
 # misc
 .DS_Store
 Thumbs.db
+
+# credentials and private keys
+/secrets/
+/credentials/
 *.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+
+# local database backups
+*.dump
+*.backup
+*.sql.gz
 
 # vercel
 .vercel
