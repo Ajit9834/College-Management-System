@@ -1,105 +1,154 @@
-# CampusFlow — College Management System
+# CampusFlow
 
-Role-based college platform for **students**, **college staff**, and **platform admins**. Built with Next.js (App Router), TypeScript, Tailwind CSS, Drizzle ORM, and PostgreSQL.
+CampusFlow is a role-based college management system built with Next.js, TypeScript, PostgreSQL, and Drizzle ORM. It gives each portal a clear responsibility: students can manage their academic life, college users handle operations, and platform administrators oversee the institution hierarchy.
 
-## Features
+## Overview
 
-- Secure session sign-in with hashed passwords and rate-limited login
-- Self-service password reset with single-use, hashed, 30-minute tokens
-- Three portals with server-enforced authorization and college/student scoping
-- Students, departments, programs, courses, offerings, enrollments, timetable
-- Attendance sessions/records, assessments/results (publish-gated), fee invoices
-- Notices, audit logs, and platform settings
-- College self-service profile (address, phone, email, website, city, state)
-- Search, validation, confirmation for high-impact actions, and responsive UI
+This application is designed for multi-college operations with strict data isolation. The platform supports:
+
+- Student enrollment, academic records, and timetables
+- Department, program, course, and offering management
+- Attendance tracking and assessment workflows
+- Fee management and invoice visibility
+- Platform-wide notices and audit logging
+- Secure authentication and authorization rules
+
+## Tech stack
+
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS
+- PostgreSQL
+- Drizzle ORM
+- Server-side session authentication
+
+## Core features
+
+- Secure login with session-based authentication
+- Password reset flow with expiring, single-use tokens
+- Role-based access control across admin, college, and student portals
+- College-scoped data visibility and authorization checks
+- Attendance sessions and record tracking
+- Assessment entry, result publishing, and student report views
+- Fee invoicing and payment tracking
+- Notice publishing and settings management
+- Audit logging for sensitive actions
+
+## Project structure
+
+```bash
+.
+├── src/
+│   ├── app/               # App routes and API endpoints
+│   ├── components/        # Reusable UI and portal components
+│   ├── db/                # Database schema and seed logic
+│   └── lib/               # Auth, permissions, validation, utilities
+├── .env.example           # Example environment file
+├── drizzle.config.ts      # Drizzle configuration
+├── package.json           # Scripts and dependencies
+├── next.config.ts         # Next.js app config
+├── tsconfig.json          # TypeScript config
+├── README.md              # Project documentation
+└── .gitignore             # Default ignore rules
+```
+
+## Prerequisites
+
+Before running the app locally, make sure you have:
+
+- Node.js 20+
+- PostgreSQL database
+- npm
 
 ## Local setup
 
-1. Copy environment variables:
+1. Create your environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-| Variable | Required | Purpose |
+2. Update the variables in `.env`:
+
+| Variable | Required | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | yes | PostgreSQL connection string. Special characters in the password must be URL-encoded. |
-| `SESSION_SECRET` | yes | HMAC key for signing session cookies. Use a long random value. |
-| `RESEND_API_KEY` | no | Resend API key for password reset emails. Without it, reset links are logged to the server console in development. |
-| `MAIL_FROM` | no | Sender address for reset emails. Defaults to `CampusFlow <no-reply@campusflow.edu>`. |
-| `APP_URL` | no | Public base URL used to build reset links. Falls back to the incoming request origin. |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `SESSION_SECRET` | Yes | Secret used to sign session cookies |
+| `RESEND_API_KEY` | No | Used for password reset emails |
+| `MAIL_FROM` | No | Sender address for outbound email |
+| `APP_URL` | No | Public app URL used for reset links |
 
-2. Create the PostgreSQL database (default in this sandbox: `app_db`).
-
-3. Install dependencies and apply the schema:
+3. Create the PostgreSQL database if needed, then apply the schema:
 
 ```bash
 npm install
 npx drizzle-kit push
 ```
 
-Demo data is seeded automatically on first app load when the `users` table is empty.
+Demo data is seeded on first load when the user table is empty.
 
-4. Start the app:
+4. Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open http://localhost:3000 in your browser.
 
 ## Demo accounts
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Platform admin | `admin@campusflow.edu` | `CampusAdmin!23` |
-| College admin (Riverside) | `clare.admin@riverside.edu` | `CollegeAdmin!23` |
-| Faculty | `ravi.faculty@riverside.edu` | `FacultyPass!23` |
-| Accounts staff | `nina.accounts@riverside.edu` | `AccountsPass!23` |
-| Student | `arjun.student@riverside.edu` | `StudentPass!23` |
-| Harbor college admin | `priya.admin@harborarts.edu` | `CollegeAdmin!23` |
-| Harbor student | `lina.student@harborarts.edu` | `StudentPass!23` |
 
-Harbor accounts exist so college-scoped authorization can be verified (Riverside staff cannot read Harbor records).
 
-## Scripts
+## Available scripts
 
 ```bash
-npm run dev          # development server
-npm run build        # production build
-npm run start        # production server
-npm run lint         # ESLint
-npm run typecheck    # TypeScript
+npm run dev        # Run the app in development mode
+npm run build      # Create a production build
+npm run start      # Start the production app
+npm run lint       # Run ESLint checks
+npm run typecheck  # Run TypeScript validation
 ```
 
-## API
+## API overview
 
-Base path: `/api/v1`
+The API is organized under `/api/v1` and includes auth, admin, college, and student endpoints.
+
+Examples:
 
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/forgot-password`
 - `POST /api/v1/auth/reset-password`
-- `GET  /api/v1/auth/me`
-- Admin: `/api/v1/admin/colleges`, `/users`, `/audit-logs`, `/settings`
-- College: `/api/v1/college/students`, `/courses`, `/attendance/sessions`, `/assessments`, `/fees`, `/notices`, `/settings`
-- Student: `/api/v1/student/me`, `/courses`, `/timetable`, `/attendance`, `/results`, `/fees`
+- `GET /api/v1/auth/me`
 - `GET /api/v1/notices`
+- Admin routes under `/api/v1/admin/*`
+- College routes under `/api/v1/college/*`
+- Student routes under `/api/v1/student/*`
 
-Errors use `{ error: { code, message, details? } }`. Success uses `{ data, meta }`.
+Response conventions:
 
-## Authorization rules
+- Errors return `{ error: { code, message, details? } }`
+- Successful responses return `{ data, meta }`
 
-- Students can only read their own academic, attendance, result, and fee records.
-- College staff can only access records for their assigned college.
-- Only college admins can publish results and manage student records.
-- Only platform admins can create colleges and assign privileged roles.
-- Suspended users cannot use protected routes.
+## Authorization model
 
-## Tests
+The platform enforces these rules:
 
-Permission helpers live in `src/lib/permissions.ts`. Run:
+- Students can only access their own records and academic information
+- College staff can only work within their assigned college
+- Only college admins can publish results and manage student records
+- Only platform admins can create colleges and assign privileged roles
+- Suspended users cannot access protected routes
+
+## Testing
+
+Permission logic is covered in the test file below:
 
 ```bash
 node --experimental-strip-types --test src/lib/permissions.test.ts
 ```
+
+## Notes
+
+This project is a complete working college management prototype focused on data security, role-based access, and operational workflows. It is suitable for local development, demos, and further extension into a production-ready campus platform.
