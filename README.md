@@ -40,10 +40,12 @@ This application is designed for multi-college operations with strict data isola
 ```bash
 .
 ├── src/
-│   ├── app/               # App routes and API endpoints
-│   ├── components/        # Reusable UI and portal components
-│   ├── db/                # Database schema and seed logic
-│   └── lib/               # Auth, permissions, validation, utilities
+│   ├── app/               # Next.js pages and API route handlers
+│   ├── frontend/
+│   │   └── components/    # Reusable UI and portal components
+│   └── backend/
+│       ├── db/            # Database schema and seed logic
+│       └── lib/           # Auth, permissions, validation, utilities
 ├── .env.example           # Example environment file
 ├── drizzle.config.ts      # Drizzle configuration
 ├── package.json           # Scripts and dependencies
@@ -146,9 +148,11 @@ The platform enforces these rules:
 Permission logic is covered in the test file below:
 
 ```bash
-node --experimental-strip-types --test src/lib/permissions.test.ts
+node --experimental-strip-types --test src/backend/lib/permissions.test.ts
 ```
 
 ## Notes
+
+The `frontend` and `backend` folders organize the UI components and server-side modules within the same Next.js application. Next.js requires page and API route entrypoints to remain under `src/app`, so this organization does not create independently deployable applications.
 
 This project is a complete working college management prototype focused on data security, role-based access, and operational workflows. It is suitable for local development, demos, and further extension into a production-ready campus platform.

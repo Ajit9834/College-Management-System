@@ -13,12 +13,25 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
     "baseUrl": ".",
     "paths": {
+      "@/db": [
+        "./src/backend/db/index.ts"
+      ],
+      "@/components/*": [
+        "./src/frontend/components/*"
+      ],
+      "@/db/*": [
+        "./src/backend/db/*"
+      ],
+      "@/lib/*": [
+        "./src/backend/lib/*"
+      ],
       "@/*": [
         "./src/*"
       ]

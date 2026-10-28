@@ -7,7 +7,7 @@ import {
   computeGrade,
   portalForUser,
   type AuthUser,
-} from "./permissions";
+} from "./permissions.ts";
 
 function user(partial: Partial<AuthUser> & Pick<AuthUser, "roles">): AuthUser {
   return {
