@@ -16,7 +16,7 @@ export default async function AdminSettingsPage() {
         <JsonForm action="/api/v1/admin/settings" method="PATCH" submitLabel="Save settings">
           <div>
             <label className="label" htmlFor="platform_name">Platform name</label>
-            <input id="platform_name" name="platform_name" className="input" defaultValue={settings.platform_name ?? "CampusFlow"} />
+            <input id="platform_name" name="platform_name" className="input" defaultValue={settings.platform_name ?? "EduSphere"} />
           </div>
           <div>
             <label className="label" htmlFor="timezone">Timezone</label>

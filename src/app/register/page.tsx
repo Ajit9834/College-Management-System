@@ -78,7 +78,7 @@ export default async function RegisterPage({
         <RegisterNav current="/register" />
         {reason === "no_account" ? (
           <div className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            No CampusFlow account exists for{" "}
+            No EduSphere account exists for{" "}
             <span className="font-medium">{googleNoticeEmail || "that Google account"}</span>.
             Complete the form below to create your student account.
           </div>

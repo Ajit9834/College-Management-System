@@ -14,7 +14,6 @@ This application is designed for multi-college operations with strict data isola
 - Secure authentication and authorization rules
 
 ## Tech stack
-
 - Next.js 16 (App Router)
 - React 19
 - TypeScript
@@ -89,6 +88,7 @@ npx drizzle-kit push
 ```
 
 Demo data is seeded on first load when the user table is empty.
+The student dashboard automatically enrolls active students in active offerings matching their college, department, semester, and academic year.
 
 4. Start the development server:
 
@@ -100,6 +100,12 @@ Open http://localhost:3000 in your browser.
 
 ## Demo accounts
 
+Student portal:
+
+- Email: `arjun.student@riverside.edu`
+- Password: `StudentPass!23`
+
+Sign in at `/login` to view the seeded student dashboard data. Demo accounts are created on first load only when the user table is empty.
 
 
 ## Available scripts

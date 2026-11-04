@@ -185,7 +185,7 @@ export class PdfDocument {
       "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
     objects[4] =
       "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
-    objects[5] = `<< /Title (${escapeText(title)}) /Producer (CampusFlow) >>`;
+    objects[5] = `<< /Title (${escapeText(title)}) /Producer (EduSphere) >>`;
     contents.forEach((content, index) => {
       objects[pageIds[index]] =
         `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] ` +

@@ -32,6 +32,7 @@ export const adminNav: NavItem[] = [
   { href: "/admin/approvals", label: "Approvals", icon: "approvals" },
   { href: "/admin/colleges", label: "Colleges", icon: "building" },
   { href: "/admin/users", label: "Users & Roles", icon: "users" },
+  { href: "/admin/notices", label: "Platform Notices", icon: "notices" },
   { href: "/admin/audit", label: "Audit Logs", icon: "reports" },
   { href: "/admin/reports", label: "Reports", icon: "reports" },
   { href: "/admin/settings", label: "Platform Settings", icon: "settings" },

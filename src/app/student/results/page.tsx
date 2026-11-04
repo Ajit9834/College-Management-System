@@ -2,13 +2,17 @@ import { EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { requireStudentPage } from "@/lib/guard";
 import { getStudentByUserId, listStudentResults } from "@/lib/data";
 import { formatDate } from "@/lib/format";
+import { SampleDataNotice } from "@/components/sample-data-notice";
+import { demoResults } from "../demo-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentResultsPage() {
   const user = await requireStudentPage();
   const profile = await getStudentByUserId(user.id);
-  const rows = profile ? await listStudentResults(profile.student.id) : [];
+  const savedRows = profile ? await listStudentResults(profile.student.id) : [];
+  const usingSampleData = savedRows.length === 0;
+  const rows = usingSampleData ? demoResults : savedRows;
 
   return (
     <div>
@@ -36,9 +40,8 @@ export default async function StudentResultsPage() {
           </div>
         }
       />
-      {rows.length === 0 ? (
-        <EmptyState title="No published results" description="Marks appear after your college publishes an assessment." />
-      ) : (
+      {usingSampleData ? <SampleDataNotice /> : null}
+      {rows.length > 0 ? (
         <div className="table-wrap card">
           <table className="data">
             <thead>
@@ -69,7 +72,7 @@ export default async function StudentResultsPage() {
             </tbody>
           </table>
         </div>
-      )}
+      ) : <EmptyState title="No published results" description="Marks appear after your college publishes an assessment." />}
     </div>
   );
 }

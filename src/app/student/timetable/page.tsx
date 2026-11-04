@@ -1,21 +1,25 @@
 import { EmptyState, PageHeader } from "@/components/ui";
 import { requireStudentPage } from "@/lib/guard";
-import { getStudentByUserId, listStudentTimetable } from "@/lib/data";
+import { getStudentByUserId, listStudentTimetable, syncStudentCourseEnrollments } from "@/lib/data";
 import { weekdayName } from "@/lib/format";
+import { SampleDataNotice } from "@/components/sample-data-notice";
+import { demoTimetable } from "../demo-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentTimetablePage() {
   const user = await requireStudentPage();
   const profile = await getStudentByUserId(user.id);
-  const rows = profile ? await listStudentTimetable(profile.student.id) : [];
+  if (profile) await syncStudentCourseEnrollments(profile.student.id);
+  const savedRows = profile ? await listStudentTimetable(profile.student.id) : [];
+  const usingSampleData = savedRows.length === 0;
+  const rows = usingSampleData ? demoTimetable : savedRows;
 
   return (
     <div>
       <PageHeader title="Timetable" description="Weekly class schedule for enrolled courses." />
-      {rows.length === 0 ? (
-        <EmptyState title="No timetable entries" description="Your college has not published a timetable yet." />
-      ) : (
+      {usingSampleData ? <SampleDataNotice /> : null}
+      {rows.length > 0 ? (
         <div className="grid gap-4">
           {[1, 2, 3, 4, 5, 6, 7].map((day) => {
             const items = rows.filter((r) => r.weekday === day);
@@ -42,7 +46,7 @@ export default async function StudentTimetablePage() {
             );
           })}
         </div>
-      )}
+      ) : <EmptyState title="No timetable entries" description="Your college has not published a timetable yet." />}
     </div>
   );
 }

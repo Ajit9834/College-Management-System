@@ -66,7 +66,7 @@ export function PortalLoginShell({
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white">
               <GraduationCap className="h-5 w-5" />
             </span>
-            CampusFlow
+           EduSphere
           </Link>
           <span className={clsx("rounded-full px-3 py-1 text-xs font-medium", theme.chip)}>
             {theme.label}

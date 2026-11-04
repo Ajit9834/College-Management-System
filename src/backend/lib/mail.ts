@@ -9,7 +9,7 @@ function resetBody({ fullName, resetUrl, expiresInMinutes }: PasswordResetMail) 
   return [
     `Hi ${fullName},`,
     "",
-    "We received a request to reset your CampusFlow password.",
+    "We received a request to reset your EduSphere password.",
     `Open this link to choose a new one: ${resetUrl}`,
     "",
     `The link expires in ${expiresInMinutes} minutes and can only be used once.`,
@@ -24,7 +24,7 @@ function resetBody({ fullName, resetUrl, expiresInMinutes }: PasswordResetMail) 
  */
 export async function sendPasswordResetEmail(mail: PasswordResetMail) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.MAIL_FROM || "CampusFlow <no-reply@campusflow.edu>";
+  const from = process.env.MAIL_FROM || "EduSphere <no-reply@campusflow.edu>";
   const text = resetBody(mail);
 
   if (!apiKey) {
@@ -47,7 +47,7 @@ export async function sendPasswordResetEmail(mail: PasswordResetMail) {
     body: JSON.stringify({
       from,
       to: mail.to,
-      subject: "Reset your CampusFlow password",
+      subject: "Reset your EduSphere password",
       text,
     }),
   });

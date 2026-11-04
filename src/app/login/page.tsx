@@ -38,7 +38,7 @@ export default async function LoginPage({
     <PortalLoginShell
       portal="student"
       title="Student sign in"
-      description="Use your CampusFlow student account, or continue with Google."
+      description="Use your EduSphere student account, or continue with Google."
     >
       <GoogleAuthButton />
       <OrDivider />

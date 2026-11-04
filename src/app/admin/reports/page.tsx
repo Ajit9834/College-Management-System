@@ -22,7 +22,7 @@ export default async function AdminReportsPage() {
     <div>
       <PageHeader
         title="Platform reports"
-        description="Aggregate counts across every college on CampusFlow."
+        description="Aggregate counts across every college on EduSphere."
         action={
           <a className="btn btn-ghost" href="/api/v1/admin/reports/export">
             Export colleges CSV

@@ -78,7 +78,7 @@ function drawStudentBlock(doc: PdfDocument, profile: StudentProfile) {
 function drawFooter(doc: PdfDocument) {
   doc.spacer(12);
   doc.rule();
-  doc.muted(`Generated ${formatDateTime(new Date())} · CampusFlow`);
+  doc.muted(`Generated ${formatDateTime(new Date())} · EduSphere`);
 }
 
 export async function buildTranscript(profile: StudentProfile): Promise<Buffer> {

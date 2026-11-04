@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CampusFlow · College Management System",
+  title: "EduSphere · College Management System",
   description:
     "Role-based college management for students, faculty, and platform administrators.",
 };

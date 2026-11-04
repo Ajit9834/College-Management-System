@@ -96,7 +96,7 @@ export function AppShell({
           <GraduationCap className="h-5 w-5" />
         </div>
         <div>
-          <p className="font-semibold tracking-tight">CampusFlow</p>
+          <p className="font-semibold tracking-tight">EduSphere</p>
           <p className="text-xs text-slate-500">{portalLabel}</p>
         </div>
       </div>

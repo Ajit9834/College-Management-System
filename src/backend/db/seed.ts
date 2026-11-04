@@ -687,7 +687,7 @@ async function seedOnce() {
     {
       collegeId: null,
       title: "Platform update: attendance corrections now audited",
-      body: "CampusFlow now records a complete audit trail for attendance corrections and result publication across all colleges.",
+      body: "EduSphere now records a complete audit trail for attendance corrections and result publication across all colleges.",
       audience: "staff",
       publishStatus: "published",
       publishedAt: new Date("2026-02-10T09:00:00Z"),
@@ -705,7 +705,7 @@ async function seedOnce() {
   ]);
 
   await db.insert(platformSettings).values([
-    { key: "platform_name", value: "CampusFlow" },
+    { key: "platform_name", value: "EduSphere" },
     { key: "timezone", value: "Asia/Kolkata" },
     { key: "academic_year", value: "2025-2026" },
     { key: "support_email", value: "support@campusflow.edu" },

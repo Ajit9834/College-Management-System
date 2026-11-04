@@ -73,6 +73,48 @@ export async function getStudentById(id: string) {
   return row ?? null;
 }
 
+export async function syncStudentCourseEnrollments(studentId: string) {
+  const [student] = await db
+    .select({
+      id: students.id,
+      collegeId: students.collegeId,
+      departmentId: students.departmentId,
+      currentSemester: students.currentSemester,
+      academicYear: students.academicYear,
+      status: students.status,
+    })
+    .from(students)
+    .where(eq(students.id, studentId))
+    .limit(1);
+  if (!student || student.status !== "active") return;
+
+  const matchingOfferings = await db
+    .select({ id: courseOfferings.id })
+    .from(courseOfferings)
+    .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
+    .where(
+      and(
+        eq(courseOfferings.collegeId, student.collegeId),
+        eq(courseOfferings.semester, student.currentSemester),
+        eq(courseOfferings.academicYear, student.academicYear),
+        eq(courseOfferings.status, "active"),
+        eq(courses.departmentId, student.departmentId),
+      ),
+    );
+  if (matchingOfferings.length === 0) return;
+
+  await db
+    .insert(courseEnrollments)
+    .values(
+      matchingOfferings.map(({ id }) => ({
+        offeringId: id,
+        studentId: student.id,
+        status: "enrolled" as const,
+      })),
+    )
+    .onConflictDoNothing();
+}
+
 export async function listStudentCourses(studentId: string) {
   return db
     .select({

@@ -1,20 +1,24 @@
 import { EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { requireStudentPage } from "@/lib/guard";
-import { getStudentByUserId, listStudentCourses } from "@/lib/data";
+import { getStudentByUserId, listStudentCourses, syncStudentCourseEnrollments } from "@/lib/data";
+import { SampleDataNotice } from "@/components/sample-data-notice";
+import { demoCourses } from "../demo-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentCoursesPage() {
   const user = await requireStudentPage();
   const profile = await getStudentByUserId(user.id);
-  const courses = profile ? await listStudentCourses(profile.student.id) : [];
+  if (profile) await syncStudentCourseEnrollments(profile.student.id);
+  const savedCourses = profile ? await listStudentCourses(profile.student.id) : [];
+  const usingSampleData = savedCourses.length === 0;
+  const courses = usingSampleData ? demoCourses : savedCourses;
 
   return (
     <div>
       <PageHeader title="My courses" description="Courses assigned to your current enrollment." />
-      {courses.length === 0 ? (
-        <EmptyState title="No courses yet" description="Your college will assign course offerings for this semester." />
-      ) : (
+      {usingSampleData ? <SampleDataNotice /> : null}
+      {courses.length > 0 ? (
         <div className="table-wrap card">
           <table className="data">
             <thead>
@@ -45,7 +49,7 @@ export default async function StudentCoursesPage() {
             </tbody>
           </table>
         </div>
-      )}
+      ) : <EmptyState title="No courses yet" description="Your college will assign course offerings for this semester." />}
     </div>
   );
 }

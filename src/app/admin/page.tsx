@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
     <div>
       <PageHeader
         title="Platform overview"
-        description="Colleges, accounts, and recent audited activity across CampusFlow."
+        description="Colleges, accounts, and recent audited activity across EduSphere."
         action={
           <div className="flex gap-2">
             <Link href="/admin/colleges" className="btn btn-primary">

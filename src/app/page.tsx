@@ -23,7 +23,7 @@ export default async function HomePage() {
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white">
             <GraduationCap className="h-5 w-5" />
           </span>
-          CampusFlow
+          EduSphere
         </div>
         <div className="flex items-center gap-4 text-sm">
           <Link
@@ -48,7 +48,7 @@ export default async function HomePage() {
               One platform for students, colleges, and administrators.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-slate-600">
-              CampusFlow centralizes enrollment, attendance, results, fees, and notices with
+              EduSphere centralizes enrollment, attendance, results, fees, and notices with
               strict role-based access and a calm, modern academic workspace.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">

@@ -22,7 +22,7 @@ export default async function CollegeRegisterPage() {
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-600 text-white">
             <Building2 className="h-5 w-5" />
           </span>
-          CampusFlow
+          EduSphere
         </div>
         <PageHeader
           title="Register your college"

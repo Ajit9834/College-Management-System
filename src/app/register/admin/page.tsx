@@ -27,7 +27,7 @@ export default async function AdminRegisterPage() {
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
             <ShieldCheck className="h-5 w-5" />
           </span>
-          CampusFlow
+          EduSphere
         </div>
         <PageHeader
           title="Administrator access"
@@ -41,7 +41,7 @@ export default async function AdminRegisterPage() {
             Self-registration is not available for administrators
           </div>
           <p className="mt-2">
-            To keep the platform secure, CampusFlow never grants the platform administrator
+            To keep the platform secure, EduSphere never grants the platform administrator
             role from a public form, and it does not expose an invitation code or any
             server credentials in the browser.
           </p>
