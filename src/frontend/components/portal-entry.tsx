@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen, ClipboardCheck, ShieldCheck } from "lucide-react";
 
@@ -40,7 +41,15 @@ export function PortalEntryCards() {
     <section id="portals" className="grid gap-5 md:grid-cols-3">
       {portals.map((item) => (
         <article key={item.key} className="card flex flex-col overflow-hidden">
-          <img src={item.image} alt="" className="h-40 w-full object-cover" />
+          <div className="relative h-40">
+            <Image
+              src={item.image}
+              alt=""
+              fill
+              sizes="(min-width: 768px) 33vw, 100vw"
+              className="object-cover"
+            />
+          </div>
           <div className="flex flex-1 flex-col p-5">
             <item.icon className="h-5 w-5 text-indigo-600" />
             <h2 className="mt-3 text-xl font-semibold">{item.title}</h2>

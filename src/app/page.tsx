@@ -1,4 +1,5 @@
 import { GraduationCap } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { portalForUser } from "@/lib/permissions";
@@ -12,9 +13,9 @@ const HERO =
   "https://images.pexels.com/photos/36078146/pexels-photo-36078146.jpeg?auto=compress&cs=tinysrgb&w=1600";
 
 export default async function HomePage() {
-  await ensureSeeded();
   const user = await getCurrentUser();
   if (user) redirect(portalForUser(user) ?? "/");
+  await ensureSeeded();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -60,8 +61,15 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-          <div className="overflow-hidden rounded-3xl border border-slate-200 shadow-2xl">
-            <img src={HERO} alt="Aerial view of a modern university campus" className="h-[360px] w-full object-cover" />
+          <div className="relative h-[360px] overflow-hidden rounded-3xl border border-slate-200 shadow-2xl">
+            <Image
+              src={HERO}
+              alt="Aerial view of a modern university campus"
+              fill
+              priority
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
           </div>
         </section>
 
