@@ -1,4 +1,4 @@
-# CampusFlow
+# EduSphere
 
 CampusFlow is a role-based college management system built with Next.js, TypeScript, PostgreSQL, and Drizzle ORM. It gives each portal a clear responsibility: students can manage their academic life, college users handle operations, and platform administrators oversee the institution hierarchy.
 
