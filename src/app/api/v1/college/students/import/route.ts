@@ -24,6 +24,7 @@ const REQUIRED_COLUMNS = [
   "programcode",
   "currentsemester",
   "academicyear",
+  "password",
 ];
 
 export async function POST(request: Request) {
@@ -55,12 +56,12 @@ export async function POST(request: Request) {
         .from(departments)
         .where(eq(departments.collegeId, collegeId)),
       db
-        .select({ id: programs.id, code: programs.code })
+        .select({ id: programs.id, code: programs.code, departmentId: programs.departmentId })
         .from(programs)
         .where(eq(programs.collegeId, collegeId)),
     ]);
     const departmentByCode = new Map(departmentRows.map((d) => [d.code.toUpperCase(), d.id]));
-    const programByCode = new Map(programRows.map((p) => [p.code.toUpperCase(), p.id]));
+    const programByCode = new Map(programRows.map((p) => [p.code.toUpperCase(), p]));
 
     const cell = (row: string[], name: string) => {
       const index = columnIndex(name);
@@ -76,13 +77,17 @@ export async function POST(request: Request) {
       const departmentCode = cell(row, "departmentcode").toUpperCase();
       const programCode = cell(row, "programcode").toUpperCase();
       const departmentId = departmentByCode.get(departmentCode);
-      const programId = programByCode.get(programCode);
+      const program = programByCode.get(programCode);
       if (!departmentId) {
         failed.push({ row: rowNumber, error: `Unknown department code "${departmentCode}".` });
         continue;
       }
-      if (!programId) {
+      if (!program) {
         failed.push({ row: rowNumber, error: `Unknown program code "${programCode}".` });
+        continue;
+      }
+      if (program.departmentId !== departmentId) {
+        failed.push({ row: rowNumber, error: "The program does not belong to the selected department." });
         continue;
       }
 
@@ -90,9 +95,9 @@ export async function POST(request: Request) {
         fullName: cell(row, "fullname"),
         email: cell(row, "email"),
         phone: cell(row, "phone") || null,
-        password: cell(row, "password") || undefined,
+        password: cell(row, "password"),
         registrationNo: cell(row, "registrationno"),
-        programId,
+        programId: program.id,
         departmentId,
         currentSemester: cell(row, "currentsemester"),
         academicYear: cell(row, "academicyear"),
@@ -117,7 +122,7 @@ export async function POST(request: Request) {
             email: parsed.data.email,
             fullName: parsed.data.fullName,
             phone: parsed.data.phone ?? null,
-            passwordHash: await hashPassword(parsed.data.password || "StudentPass!23"),
+            passwordHash: await hashPassword(parsed.data.password),
             status: "active",
           })
           .returning();

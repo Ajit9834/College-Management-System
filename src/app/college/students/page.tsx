@@ -91,7 +91,7 @@ export default async function CollegeStudentsPage({
               </div>
               <div>
                 <label className="label" htmlFor="password">Temporary password</label>
-                <input id="password" name="password" className="input" defaultValue="StudentPass!23" />
+                <input id="password" name="password" className="input" minLength={8} required />
               </div>
             </div>
           </JsonForm>
@@ -100,7 +100,7 @@ export default async function CollegeStudentsPage({
           <h2 className="mb-1 font-semibold">Bulk import students</h2>
           <p className="mb-4 text-sm text-slate-500">
             CSV header row: fullName, email, registrationNo, departmentCode, programCode, currentSemester,
-            academicYear. Optional: phone, password, dateOfBirth, gender, address, emergencyContact, status.
+            academicYear, password. Optional: phone, dateOfBirth, gender, address, emergencyContact, status.
           </p>
           <CsvImportForm
             action="/api/v1/college/students/import"

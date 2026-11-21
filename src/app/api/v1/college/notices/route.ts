@@ -1,6 +1,6 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { notices } from "@/db/schema";
+import { fileUploads, notices } from "@/db/schema";
 import { created, ok, paginationMeta, parsePagination, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
@@ -38,6 +38,19 @@ export async function POST(request: Request) {
     const collegeId = requireCollegeId(actor);
     const parsed = noticeSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
+    if (parsed.data.attachmentId) {
+      const [attachment] = await db
+        .select({ id: fileUploads.id })
+        .from(fileUploads)
+        .where(
+          and(
+            eq(fileUploads.id, parsed.data.attachmentId),
+            eq(fileUploads.collegeId, collegeId),
+          ),
+        )
+        .limit(1);
+      if (!attachment) return validationError("Select an attachment uploaded to your college.");
+    }
     const publishStatus = parsed.data.publishStatus ?? "draft";
     const [row] = await db
       .insert(notices)

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { courseOfferings } from "@/db/schema";
+import { courseOfferings, userRoles } from "@/db/schema";
 import { notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
@@ -25,6 +25,21 @@ export async function PATCH(
       .where(and(eq(courseOfferings.id, id), eq(courseOfferings.collegeId, collegeId)))
       .limit(1);
     if (!existing) return notFound("Course offering not found.");
+
+    if (parsed.data.facultyUserId) {
+      const [facultyRole] = await db
+        .select({ id: userRoles.id })
+        .from(userRoles)
+        .where(
+          and(
+            eq(userRoles.userId, parsed.data.facultyUserId),
+            eq(userRoles.collegeId, collegeId),
+            eq(userRoles.role, "faculty"),
+          ),
+        )
+        .limit(1);
+      if (!facultyRole) return validationError("Select faculty assigned to your college.");
+    }
 
     const [row] = await db
       .update(courseOfferings)

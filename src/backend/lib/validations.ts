@@ -143,7 +143,7 @@ export const studentSchema = z.object({
   fullName: z.string().min(2).max(160),
   email: z.string().email().transform((v) => v.trim().toLowerCase()),
   phone: z.string().max(40).optional().nullable(),
-  password: z.string().min(8).optional(),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   registrationNo: z.string().min(3).max(40),
   programId: z.string().uuid(),
   departmentId: z.string().uuid(),

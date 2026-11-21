@@ -1,6 +1,6 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { courses } from "@/db/schema";
+import { courses, departments } from "@/db/schema";
 import { created, ok, paginationMeta, parsePagination, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
@@ -38,6 +38,17 @@ export async function POST(request: Request) {
     const collegeId = requireCollegeId(actor);
     const parsed = courseSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
+    const [department] = await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(
+        and(
+          eq(departments.id, parsed.data.departmentId),
+          eq(departments.collegeId, collegeId),
+        ),
+      )
+      .limit(1);
+    if (!department) return validationError("Select a department in your college.");
     const [row] = await db
       .insert(courses)
       .values({ ...parsed.data, collegeId })

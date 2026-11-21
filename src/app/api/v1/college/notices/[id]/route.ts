@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { notices } from "@/db/schema";
+import { fileUploads, notices } from "@/db/schema";
 import { notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
@@ -24,6 +24,20 @@ export async function PATCH(
       .where(and(eq(notices.id, id), eq(notices.collegeId, collegeId)))
       .limit(1);
     if (!existing) return notFound("Notice not found.");
+
+    if (parsed.data.attachmentId) {
+      const [attachment] = await db
+        .select({ id: fileUploads.id })
+        .from(fileUploads)
+        .where(
+          and(
+            eq(fileUploads.id, parsed.data.attachmentId),
+            eq(fileUploads.collegeId, collegeId),
+          ),
+        )
+        .limit(1);
+      if (!attachment) return validationError("Select an attachment uploaded to your college.");
+    }
 
     const publishStatus = parsed.data.publishStatus ?? existing.publishStatus;
     const [row] = await db

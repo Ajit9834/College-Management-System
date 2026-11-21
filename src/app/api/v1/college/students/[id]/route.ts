@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { students, userRoles, users } from "@/db/schema";
+import { departments, fileUploads, programs, students, userRoles, users } from "@/db/schema";
 import { notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, HttpError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
@@ -47,11 +47,47 @@ export async function PATCH(
     const [existing] = await db.select().from(students).where(eq(students.id, id)).limit(1);
     if (!existing || existing.collegeId !== collegeId) return notFound("Student not found.");
 
+    const programId = parsed.data.programId ?? existing.programId;
+    const departmentId = parsed.data.departmentId ?? existing.departmentId;
+    if (parsed.data.programId !== undefined || parsed.data.departmentId !== undefined) {
+      const [placement] = await db
+        .select({ id: programs.id })
+        .from(programs)
+        .innerJoin(departments, eq(departments.id, programs.departmentId))
+        .where(
+          and(
+            eq(programs.id, programId),
+            eq(programs.collegeId, collegeId),
+            eq(programs.departmentId, departmentId),
+            eq(departments.collegeId, collegeId),
+          ),
+        )
+        .limit(1);
+      if (!placement) {
+        return validationError("Select a program and department in your college.");
+      }
+    }
+
+    const photoId = parsed.data.photoId === undefined ? existing.photoId : parsed.data.photoId;
+    if (parsed.data.photoId && photoId) {
+      const [photo] = await db
+        .select({ id: fileUploads.id })
+        .from(fileUploads)
+        .where(
+          and(
+            eq(fileUploads.id, photoId),
+            eq(fileUploads.collegeId, collegeId),
+          ),
+        )
+        .limit(1);
+      if (!photo) return validationError("Select a photo uploaded to your college.");
+    }
+
     const [student] = await db
       .update(students)
       .set({
-        programId: parsed.data.programId ?? existing.programId,
-        departmentId: parsed.data.departmentId ?? existing.departmentId,
+        programId,
+        departmentId,
         registrationNo: parsed.data.registrationNo ?? existing.registrationNo,
         currentSemester: parsed.data.currentSemester ?? existing.currentSemester,
         academicYear: parsed.data.academicYear ?? existing.academicYear,

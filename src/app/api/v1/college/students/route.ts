@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { students, userRoles, users } from "@/db/schema";
+import { departments, fileUploads, programs, students, userRoles, users } from "@/db/schema";
 import { created, ok, paginationMeta, parsePagination, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, HttpError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
@@ -40,14 +40,44 @@ export async function POST(request: Request) {
     const parsed = studentSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
 
-    const password = parsed.data.password || "StudentPass!23";
+    const [placement] = await db
+      .select({ id: programs.id })
+      .from(programs)
+      .innerJoin(departments, eq(departments.id, programs.departmentId))
+      .where(
+        and(
+          eq(programs.id, parsed.data.programId),
+          eq(programs.collegeId, collegeId),
+          eq(programs.departmentId, parsed.data.departmentId),
+          eq(departments.collegeId, collegeId),
+        ),
+      )
+      .limit(1);
+    if (!placement) {
+      return validationError("Select a program and department in your college.");
+    }
+
+    if (parsed.data.photoId) {
+      const [photo] = await db
+        .select({ id: fileUploads.id })
+        .from(fileUploads)
+        .where(
+          and(
+            eq(fileUploads.id, parsed.data.photoId),
+            eq(fileUploads.collegeId, collegeId),
+          ),
+        )
+        .limit(1);
+      if (!photo) return validationError("Select a photo uploaded to your college.");
+    }
+
     const [account] = await db
       .insert(users)
       .values({
         email: parsed.data.email,
         fullName: parsed.data.fullName,
         phone: parsed.data.phone ?? null,
-        passwordHash: await hashPassword(password),
+        passwordHash: await hashPassword(parsed.data.password),
         status: "active",
       })
       .returning();
