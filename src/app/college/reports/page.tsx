@@ -1,7 +1,7 @@
 import { PageHeader, StatCard } from "@/components/ui";
 import { requireCollegePage } from "@/lib/guard";
 import { collegeDashboardStats, listCollegeStudents } from "@/lib/data";
-import { primaryCollegeId } from "@/lib/permissions";
+import { isFacultyScoped, primaryCollegeId } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export default async function CollegeReportsPage() {
   if (!collegeId) redirect("/access-denied");
   const [stats, students] = await Promise.all([
     collegeDashboardStats(collegeId),
-    listCollegeStudents(collegeId),
+    listCollegeStudents(collegeId, undefined, isFacultyScoped(user) ? user.id : undefined),
   ]);
   const byProgram = students.reduce<Record<string, number>>((acc, s) => {
     acc[s.programName] = (acc[s.programName] ?? 0) + 1;

@@ -4,8 +4,8 @@ import { students, userRoles, users } from "@/db/schema";
 import { notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, HttpError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
-import { getStudentById } from "@/lib/data";
-import { canAccessCollege, canManageStudents } from "@/lib/permissions";
+import { getStudentById, isStudentTaughtByFaculty } from "@/lib/data";
+import { canAccessCollege, canManageStudents, isFacultyScoped } from "@/lib/permissions";
 import { studentSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,9 @@ export async function GET(
     const { id } = await context.params;
     const row = await getStudentById(id);
     if (!row || !canAccessCollege(user, row.student.collegeId)) {
+      return notFound("Student not found.");
+    }
+    if (isFacultyScoped(user) && !(await isStudentTaughtByFaculty(row.student.id, user.id))) {
       return notFound("Student not found.");
     }
     return ok(row);

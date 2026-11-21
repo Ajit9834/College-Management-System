@@ -81,11 +81,14 @@ function drawFooter(doc: PdfDocument) {
   doc.muted(`Generated ${formatDateTime(new Date())} · EduSphere`);
 }
 
-export async function buildTranscript(profile: StudentProfile): Promise<Buffer> {
+export async function buildTranscript(
+  profile: StudentProfile,
+  facultyUserId?: string,
+): Promise<Buffer> {
   const [results, courses, attendance] = await Promise.all([
-    listStudentResults(profile.student.id),
-    listStudentCourses(profile.student.id),
-    listStudentAttendance(profile.student.id),
+    listStudentResults(profile.student.id, facultyUserId),
+    listStudentCourses(profile.student.id, facultyUserId),
+    listStudentAttendance(profile.student.id, facultyUserId),
   ]);
 
   const doc = new PdfDocument();
@@ -132,11 +135,14 @@ export async function buildTranscript(profile: StudentProfile): Promise<Buffer> 
   return doc.build("Academic Transcript");
 }
 
-export async function buildReportCard(profile: StudentProfile): Promise<Buffer> {
+export async function buildReportCard(
+  profile: StudentProfile,
+  facultyUserId?: string,
+): Promise<Buffer> {
   const [courses, results, attendance] = await Promise.all([
-    listStudentCourses(profile.student.id),
-    listStudentResults(profile.student.id),
-    listStudentAttendance(profile.student.id),
+    listStudentCourses(profile.student.id, facultyUserId),
+    listStudentResults(profile.student.id, facultyUserId),
+    listStudentAttendance(profile.student.id, facultyUserId),
   ]);
 
   const doc = new PdfDocument();

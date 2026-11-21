@@ -27,7 +27,12 @@ export async function verifyPassword(password: string, stored: string): Promise<
 }
 
 function sessionSecret(): string {
-  return process.env.SESSION_SECRET || "campusflow-dev-session-secret-change-me-32b";
+  const secret = process.env.SESSION_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET must be set in production.");
+  }
+  return "campusflow-dev-session-secret-change-me-32b";
 }
 
 export function signToken(payload: object, expiresInSeconds = 60 * 60 * 12): string {

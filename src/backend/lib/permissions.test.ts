@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   canAccessCollege,
+  canAccessOffering,
   canAccessStudentRecord,
   canPublishResults,
   computeGrade,
@@ -22,7 +23,8 @@ function user(partial: Partial<AuthUser> & Pick<AuthUser, "roles">): AuthUser {
 }
 
 test("computeGrade uses percentage bands", () => {
-  assert.equal(computeGrade(45, 50), "A");
+  assert.equal(computeGrade(45, 50), "A+");
+  assert.equal(computeGrade(40, 50), "A");
   assert.equal(computeGrade(10, 50), "F");
   assert.equal(computeGrade(0, 0), "N/A");
 });
@@ -48,6 +50,16 @@ test("college staff cannot cross college boundaries", () => {
   });
   assert.equal(canAccessCollege(staff, "c1"), true);
   assert.equal(canAccessCollege(staff, "c2"), false);
+});
+
+test("faculty can access only their assigned offerings", () => {
+  const faculty = user({ roles: [{ role: "faculty", collegeId: "c1" }] });
+  const admin = user({ roles: [{ role: "college_admin", collegeId: "c1" }] });
+
+  assert.equal(canAccessOffering(faculty, "u1"), true);
+  assert.equal(canAccessOffering(faculty, "u2"), false);
+  assert.equal(canAccessOffering(faculty, null), false);
+  assert.equal(canAccessOffering(admin, null), true);
 });
 
 test("only college admins publish results", () => {

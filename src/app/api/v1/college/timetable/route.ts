@@ -4,6 +4,7 @@ import { courseOfferings, courses, timetableEntries } from "@/db/schema";
 import { created, notFound, ok, paginationMeta, parsePagination, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { findTimetableConflict } from "@/lib/data";
+import { canAccessOffering, isFacultyScoped } from "@/lib/permissions";
 import { timetableSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,11 @@ export async function GET(request: Request) {
     const collegeId = requireCollegeId(user);
     const url = new URL(request.url);
     const { page, pageSize, offset } = parsePagination(url.searchParams);
-    const where = eq(timetableEntries.collegeId, collegeId);
+    const where = and(
+      eq(timetableEntries.collegeId, collegeId),
+      eq(courseOfferings.collegeId, collegeId),
+      isFacultyScoped(user) ? eq(courseOfferings.facultyUserId, user.id) : undefined,
+    );
     const [rows, counted] = await Promise.all([
       db
         .select({
@@ -59,7 +64,9 @@ export async function POST(request: Request) {
       .from(courseOfferings)
       .where(and(eq(courseOfferings.id, parsed.data.offeringId), eq(courseOfferings.collegeId, collegeId)))
       .limit(1);
-    if (!offering) return notFound("Course offering not found.");
+    if (!offering || !canAccessOffering(actor, offering.facultyUserId)) {
+      return notFound("Course offering not found.");
+    }
     const conflict = await findTimetableConflict({
       collegeId,
       weekday: parsed.data.weekday,

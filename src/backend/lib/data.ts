@@ -115,7 +115,7 @@ export async function syncStudentCourseEnrollments(studentId: string) {
     .onConflictDoNothing();
 }
 
-export async function listStudentCourses(studentId: string) {
+export async function listStudentCourses(studentId: string, facultyUserId?: string) {
   return db
     .select({
       enrollmentId: courseEnrollments.id,
@@ -130,9 +130,20 @@ export async function listStudentCourses(studentId: string) {
     })
     .from(courseEnrollments)
     .innerJoin(courseOfferings, eq(courseOfferings.id, courseEnrollments.offeringId))
+    .innerJoin(students, eq(students.id, courseEnrollments.studentId))
     .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
     .leftJoin(users, eq(users.id, courseOfferings.facultyUserId))
-    .where(eq(courseEnrollments.studentId, studentId))
+    .where(
+      and(
+        eq(courseEnrollments.studentId, studentId),
+        facultyUserId
+          ? and(
+              eq(courseOfferings.facultyUserId, facultyUserId),
+              eq(courseOfferings.collegeId, students.collegeId),
+            )
+          : undefined,
+      ),
+    )
     .orderBy(courses.code);
 }
 
@@ -162,7 +173,7 @@ export async function listStudentTimetable(studentId: string) {
     .orderBy(timetableEntries.weekday, timetableEntries.startsAt);
 }
 
-export async function listStudentAttendance(studentId: string) {
+export async function listStudentAttendance(studentId: string, facultyUserId?: string) {
   const rows = await db
     .select({
       id: attendanceRecords.id,
@@ -176,8 +187,19 @@ export async function listStudentAttendance(studentId: string) {
     .from(attendanceRecords)
     .innerJoin(attendanceSessions, eq(attendanceSessions.id, attendanceRecords.sessionId))
     .innerJoin(courseOfferings, eq(courseOfferings.id, attendanceSessions.offeringId))
+    .innerJoin(students, eq(students.id, attendanceRecords.studentId))
     .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
-    .where(eq(attendanceRecords.studentId, studentId))
+    .where(
+      and(
+        eq(attendanceRecords.studentId, studentId),
+        facultyUserId
+          ? and(
+              eq(courseOfferings.facultyUserId, facultyUserId),
+              eq(courseOfferings.collegeId, students.collegeId),
+            )
+          : undefined,
+      ),
+    )
     .orderBy(desc(attendanceSessions.sessionDate));
 
   const byCourse = new Map<
@@ -200,7 +222,7 @@ export async function listStudentAttendance(studentId: string) {
   return { records: rows, summary: [...byCourse.values()] };
 }
 
-export async function listStudentResults(studentId: string) {
+export async function listStudentResults(studentId: string, facultyUserId?: string) {
   return db
     .select({
       id: results.id,
@@ -216,9 +238,19 @@ export async function listStudentResults(studentId: string) {
     .from(results)
     .innerJoin(assessments, eq(assessments.id, results.assessmentId))
     .innerJoin(courseOfferings, eq(courseOfferings.id, assessments.offeringId))
+    .innerJoin(students, eq(students.id, results.studentId))
     .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
     .where(
-      and(eq(results.studentId, studentId), eq(assessments.publishStatus, "published")),
+      and(
+        eq(results.studentId, studentId),
+        eq(assessments.publishStatus, "published"),
+        facultyUserId
+          ? and(
+              eq(courseOfferings.facultyUserId, facultyUserId),
+              eq(courseOfferings.collegeId, students.collegeId),
+            )
+          : undefined,
+      ),
     )
     .orderBy(desc(assessments.examDate));
 }
@@ -415,7 +447,12 @@ function collegeStudentConditions(collegeId: string, q?: string, facultyUserId?:
           .select({ id: courseEnrollments.studentId })
           .from(courseEnrollments)
           .innerJoin(courseOfferings, eq(courseOfferings.id, courseEnrollments.offeringId))
-          .where(eq(courseOfferings.facultyUserId, facultyUserId)),
+          .where(
+            and(
+              eq(courseOfferings.facultyUserId, facultyUserId),
+              eq(courseOfferings.collegeId, collegeId),
+            ),
+          ),
       ),
     );
   }
@@ -507,10 +544,12 @@ export async function isStudentTaughtByFaculty(studentId: string, facultyUserId:
     .select({ id: courseEnrollments.id })
     .from(courseEnrollments)
     .innerJoin(courseOfferings, eq(courseOfferings.id, courseEnrollments.offeringId))
+    .innerJoin(students, eq(students.id, courseEnrollments.studentId))
     .where(
       and(
         eq(courseEnrollments.studentId, studentId),
         eq(courseOfferings.facultyUserId, facultyUserId),
+        eq(students.collegeId, courseOfferings.collegeId),
       ),
     )
     .limit(1);

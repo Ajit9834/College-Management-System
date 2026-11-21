@@ -3,10 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { ConfirmButton, JsonForm } from "@/components/forms";
 import { requireCollegePage } from "@/lib/guard";
-import { canManageAcademics, primaryCollegeId } from "@/lib/permissions";
+import { canAccessOffering, canManageAcademics, primaryCollegeId } from "@/lib/permissions";
 import { db } from "@/db";
 import { courseEnrollments, courseOfferings, courses, students, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,7 @@ export default async function EnrollmentEditPage({
   const [details] = await db
     .select({
       collegeId: courseOfferings.collegeId,
+      facultyUserId: courseOfferings.facultyUserId,
       courseCode: courses.code,
       courseTitle: courses.title,
       studentName: users.fullName,
@@ -38,9 +39,15 @@ export default async function EnrollmentEditPage({
     .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
     .innerJoin(students, eq(students.id, row.studentId))
     .innerJoin(users, eq(users.id, students.userId))
-    .where(eq(courseOfferings.id, row.offeringId))
+    .where(and(eq(courseOfferings.id, row.offeringId), eq(students.collegeId, collegeId)))
     .limit(1);
-  if (!details || details.collegeId !== collegeId) notFound();
+  if (
+    !details ||
+    details.collegeId !== collegeId ||
+    !canAccessOffering(user, details.facultyUserId)
+  ) {
+    notFound();
+  }
 
   return (
     <div>

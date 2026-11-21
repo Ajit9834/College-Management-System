@@ -1,6 +1,7 @@
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { csvResponse, toCsv } from "@/lib/csv";
 import { listCollegeStudents } from "@/lib/data";
+import { isFacultyScoped } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,11 @@ export async function GET() {
   try {
     const actor = await apiRequire(["college_admin", "faculty", "accounts_staff"]);
     const collegeId = requireCollegeId(actor);
-    const students = await listCollegeStudents(collegeId);
+    const students = await listCollegeStudents(
+      collegeId,
+      undefined,
+      isFacultyScoped(actor) ? actor.id : undefined,
+    );
     const csv = toCsv(
       [
         "Registration No",

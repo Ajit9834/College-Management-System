@@ -41,6 +41,7 @@ export default async function ResultsPage() {
       .where(
         and(
           eq(assessments.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
           facultyUserId ? eq(courseOfferings.facultyUserId, facultyUserId) : undefined,
         ),
       ),
@@ -71,6 +72,7 @@ export default async function ResultsPage() {
       .where(
         and(
           eq(courseOfferings.collegeId, collegeId),
+          eq(students.collegeId, collegeId),
           facultyUserId ? eq(courseOfferings.facultyUserId, facultyUserId) : undefined,
         ),
       ),

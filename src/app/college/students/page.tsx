@@ -4,7 +4,7 @@ import { CsvImportForm, JsonForm } from "@/components/forms";
 import { requireCollegePage } from "@/lib/guard";
 import { pageCollegeStudents } from "@/lib/data";
 import { normalizePagination } from "@/lib/pagination";
-import { canManageStudents, primaryCollegeId } from "@/lib/permissions";
+import { canManageStudents, isFacultyScoped, primaryCollegeId } from "@/lib/permissions";
 import { db } from "@/db";
 import { departments, programs } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -23,7 +23,12 @@ export default async function CollegeStudentsPage({
   const { q, page: pageParam } = await searchParams;
   const { page, pageSize, offset } = normalizePagination({ page: pageParam });
   const [{ rows, total }, depts, progs] = await Promise.all([
-    pageCollegeStudents(collegeId, { q, limit: pageSize, offset }),
+    pageCollegeStudents(collegeId, {
+      q,
+      facultyUserId: isFacultyScoped(user) ? user.id : undefined,
+      limit: pageSize,
+      offset,
+    }),
     db.select().from(departments).where(eq(departments.collegeId, collegeId)),
     db.select().from(programs).where(eq(programs.collegeId, collegeId)),
   ]);

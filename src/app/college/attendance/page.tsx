@@ -60,6 +60,7 @@ export default async function AttendancePage({
     .where(
       and(
         eq(courseOfferings.collegeId, collegeId),
+        eq(students.collegeId, collegeId),
         facultyUserId ? eq(courseOfferings.facultyUserId, facultyUserId) : undefined,
       ),
     );
@@ -72,6 +73,7 @@ export default async function AttendancePage({
 
   const sessionsWhere = and(
     eq(attendanceSessions.collegeId, collegeId),
+    eq(courseOfferings.collegeId, collegeId),
     facultyUserId ? eq(courseOfferings.facultyUserId, facultyUserId) : undefined,
   );
   const [recent, counted] = await Promise.all([

@@ -1,9 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { attendanceSessions } from "@/db/schema";
+import { attendanceSessions, courseOfferings } from "@/db/schema";
 import { notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
+import { canAccessOffering } from "@/lib/permissions";
 import { attendanceSessionUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -20,11 +21,26 @@ export async function PATCH(
     if (!parsed.success) return validationError(parsed.error);
 
     const [existing] = await db
-      .select()
+      .select({
+        id: attendanceSessions.id,
+        offeringId: attendanceSessions.offeringId,
+        sessionDate: attendanceSessions.sessionDate,
+        topic: attendanceSessions.topic,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
       .from(attendanceSessions)
-      .where(and(eq(attendanceSessions.id, id), eq(attendanceSessions.collegeId, collegeId)))
+      .innerJoin(courseOfferings, eq(courseOfferings.id, attendanceSessions.offeringId))
+      .where(
+        and(
+          eq(attendanceSessions.id, id),
+          eq(attendanceSessions.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
+        ),
+      )
       .limit(1);
-    if (!existing) return notFound("Attendance session not found.");
+    if (!existing || !canAccessOffering(actor, existing.facultyUserId)) {
+      return notFound("Attendance session not found.");
+    }
 
     const [row] = await db
       .update(attendanceSessions)
@@ -63,11 +79,23 @@ export async function DELETE(
     const collegeId = requireCollegeId(actor);
     const { id } = await context.params;
     const [existing] = await db
-      .select()
+      .select({
+        id: attendanceSessions.id,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
       .from(attendanceSessions)
-      .where(and(eq(attendanceSessions.id, id), eq(attendanceSessions.collegeId, collegeId)))
+      .innerJoin(courseOfferings, eq(courseOfferings.id, attendanceSessions.offeringId))
+      .where(
+        and(
+          eq(attendanceSessions.id, id),
+          eq(attendanceSessions.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
+        ),
+      )
       .limit(1);
-    if (!existing) return notFound("Attendance session not found.");
+    if (!existing || !canAccessOffering(actor, existing.facultyUserId)) {
+      return notFound("Attendance session not found.");
+    }
     await db.delete(attendanceSessions).where(eq(attendanceSessions.id, id));
     await writeAudit({
       actor,

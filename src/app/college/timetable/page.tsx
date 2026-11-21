@@ -2,10 +2,10 @@ import Link from "next/link";
 import { PageHeader, Pagination } from "@/components/ui";
 import { JsonForm } from "@/components/forms";
 import { requireCollegePage } from "@/lib/guard";
-import { canManageTimetable, primaryCollegeId } from "@/lib/permissions";
+import { canManageTimetable, isFacultyScoped, primaryCollegeId } from "@/lib/permissions";
 import { db } from "@/db";
 import { courseOfferings, courses, timetableEntries } from "@/db/schema";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { normalizePagination } from "@/lib/pagination";
 import { weekdayName } from "@/lib/format";
 import { redirect } from "next/navigation";
@@ -22,7 +22,11 @@ export default async function CollegeTimetablePage({
   if (!collegeId) redirect("/access-denied");
   const { page: pageParam } = await searchParams;
   const { page, pageSize, offset } = normalizePagination({ page: pageParam });
-  const where = eq(timetableEntries.collegeId, collegeId);
+  const where = and(
+    eq(timetableEntries.collegeId, collegeId),
+    eq(courseOfferings.collegeId, collegeId),
+    isFacultyScoped(user) ? eq(courseOfferings.facultyUserId, user.id) : undefined,
+  );
   const [rows, counted, offerings] = await Promise.all([
     db
       .select({
@@ -55,7 +59,12 @@ export default async function CollegeTimetablePage({
       })
       .from(courseOfferings)
       .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
-      .where(eq(courseOfferings.collegeId, collegeId)),
+      .where(
+        and(
+          eq(courseOfferings.collegeId, collegeId),
+          isFacultyScoped(user) ? eq(courseOfferings.facultyUserId, user.id) : undefined,
+        ),
+      ),
   ]);
   const total = counted?.[0]?.count ?? 0;
 

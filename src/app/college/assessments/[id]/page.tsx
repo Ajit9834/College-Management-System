@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { PageHeader, StatusBadge } from "@/components/ui";
 import { JsonForm, ConfirmButton } from "@/components/forms";
 import { requireCollegePage } from "@/lib/guard";
-import { canPublishResults, primaryCollegeId } from "@/lib/permissions";
+import { canAccessOffering, canPublishResults, primaryCollegeId } from "@/lib/permissions";
 import { db } from "@/db";
 import { assessments, courseOfferings, courses } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -20,35 +20,43 @@ export default async function AssessmentEditPage({
   if (!collegeId) redirect("/access-denied");
   const { id } = await params;
   const [row] = await db
-    .select()
+    .select({
+      assessment: assessments,
+      facultyUserId: courseOfferings.facultyUserId,
+      courseCode: courses.code,
+      courseTitle: courses.title,
+    })
     .from(assessments)
-    .where(and(eq(assessments.id, id), eq(assessments.collegeId, collegeId)))
-    .limit(1);
-  if (!row) notFound();
-  const [course] = await db
-    .select({ code: courses.code, title: courses.title })
-    .from(courseOfferings)
+    .innerJoin(courseOfferings, eq(courseOfferings.id, assessments.offeringId))
     .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
-    .where(eq(courseOfferings.id, row.offeringId))
+    .where(
+      and(
+        eq(assessments.id, id),
+        eq(assessments.collegeId, collegeId),
+        eq(courseOfferings.collegeId, collegeId),
+      ),
+    )
     .limit(1);
+  if (!row || !canAccessOffering(user, row.facultyUserId)) notFound();
+  const assessment = row.assessment;
   const canPublish = canPublishResults(user);
 
   return (
     <div>
       <PageHeader
-        title={row.title}
-        description={course ? `${course.code} · ${course.title}` : "Assessment"}
+        title={assessment.title}
+        description={`${row.courseCode} · ${row.courseTitle}`}
       />
       <Link href="/college/results" className="mb-4 inline-block text-sm text-indigo-600">
         ← Back to results
       </Link>
       <div className="mb-6">
-        <StatusBadge status={row.publishStatus} />
+        <StatusBadge status={assessment.publishStatus} />
       </div>
       <section className="card mb-6 max-w-2xl p-5">
         <h2 className="mb-4 font-semibold">Edit assessment</h2>
         <JsonForm
-          action={`/api/v1/college/assessments/${row.id}`}
+          action={`/api/v1/college/assessments/${assessment.id}`}
           method="PATCH"
           submitLabel="Save changes"
           successMessage="Assessment updated."
@@ -56,15 +64,15 @@ export default async function AssessmentEditPage({
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <label className="label" htmlFor="title">Title</label>
-              <input id="title" name="title" className="input" defaultValue={row.title} required />
+              <input id="title" name="title" className="input" defaultValue={assessment.title} required />
             </div>
             <div>
               <label className="label" htmlFor="maxMarks">Max marks</label>
-              <input id="maxMarks" name="maxMarks" type="number" min={1} max={1000} className="input" defaultValue={row.maxMarks} />
+              <input id="maxMarks" name="maxMarks" type="number" min={1} max={1000} className="input" defaultValue={assessment.maxMarks} />
             </div>
             <div>
               <label className="label" htmlFor="examDate">Exam date</label>
-              <input id="examDate" name="examDate" type="date" className="input" defaultValue={row.examDate ?? ""} />
+              <input id="examDate" name="examDate" type="date" className="input" defaultValue={assessment.examDate ?? ""} />
             </div>
           </div>
         </JsonForm>
@@ -76,9 +84,9 @@ export default async function AssessmentEditPage({
             Publishing makes marks visible to students. Drafting hides them again.
           </p>
           <div className="flex flex-wrap gap-2">
-            {row.publishStatus !== "published" ? (
+            {assessment.publishStatus !== "published" ? (
               <ConfirmButton
-                action={`/api/v1/college/assessments/${row.id}`}
+                action={`/api/v1/college/assessments/${assessment.id}`}
                 method="PATCH"
                 body={{ publishStatus: "published" }}
                 label="Publish results"
@@ -86,7 +94,7 @@ export default async function AssessmentEditPage({
               />
             ) : (
               <ConfirmButton
-                action={`/api/v1/college/assessments/${row.id}`}
+                action={`/api/v1/college/assessments/${assessment.id}`}
                 method="PATCH"
                 body={{ publishStatus: "draft" }}
                 label="Unpublish results"
@@ -102,7 +110,7 @@ export default async function AssessmentEditPage({
           Permanently removes this assessment and its recorded marks. This cannot be undone.
         </p>
         <ConfirmButton
-          action={`/api/v1/college/assessments/${row.id}`}
+          action={`/api/v1/college/assessments/${assessment.id}`}
           method="DELETE"
           variant="danger"
           label="Delete assessment"

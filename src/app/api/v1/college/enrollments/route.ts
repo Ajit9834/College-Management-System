@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { courseEnrollments, courseOfferings, students } from "@/db/schema";
 import { created, notFound, ok, paginationMeta, parsePagination, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
+import { isFacultyScoped } from "@/lib/permissions";
 import { writeAudit } from "@/lib/audit";
 import { enrollmentSchema } from "@/lib/validations";
 
@@ -14,7 +15,10 @@ export async function GET(request: Request) {
     const collegeId = requireCollegeId(user);
     const url = new URL(request.url);
     const { page, pageSize, offset } = parsePagination(url.searchParams);
-    const where = eq(courseOfferings.collegeId, collegeId);
+    const where = and(
+      eq(courseOfferings.collegeId, collegeId),
+      isFacultyScoped(user) ? eq(courseOfferings.facultyUserId, user.id) : undefined,
+    );
     const [rows, counted] = await Promise.all([
       db
         .select({
@@ -25,7 +29,8 @@ export async function GET(request: Request) {
         })
         .from(courseEnrollments)
         .innerJoin(courseOfferings, eq(courseOfferings.id, courseEnrollments.offeringId))
-        .where(where)
+        .innerJoin(students, eq(students.id, courseEnrollments.studentId))
+        .where(and(where, eq(students.collegeId, collegeId)))
         .orderBy(asc(courseEnrollments.id))
         .limit(pageSize)
         .offset(offset),
@@ -33,7 +38,8 @@ export async function GET(request: Request) {
         .select({ count: sql<number>`count(*)::int` })
         .from(courseEnrollments)
         .innerJoin(courseOfferings, eq(courseOfferings.id, courseEnrollments.offeringId))
-        .where(where),
+        .innerJoin(students, eq(students.id, courseEnrollments.studentId))
+        .where(and(where, eq(students.collegeId, collegeId))),
     ]);
     const total = counted?.[0]?.count ?? 0;
     return ok(rows, paginationMeta(total, { page, pageSize }));

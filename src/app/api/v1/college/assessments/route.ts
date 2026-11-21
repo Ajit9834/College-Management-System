@@ -1,9 +1,9 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { assessments, courses, courseOfferings } from "@/db/schema";
-import { created, ok, paginationMeta, parsePagination, validationError } from "@/lib/api";
+import { created, notFound, ok, paginationMeta, parsePagination, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
-import { isFacultyScoped } from "@/lib/permissions";
+import { canAccessOffering, isFacultyScoped } from "@/lib/permissions";
 import { assessmentSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     const { page, pageSize, offset } = parsePagination(url.searchParams);
     const where = and(
       eq(assessments.collegeId, collegeId),
+      eq(courseOfferings.collegeId, collegeId),
       isFacultyScoped(user) ? eq(courseOfferings.facultyUserId, user.id) : undefined,
     );
     const [rows, counted] = await Promise.all([
@@ -57,10 +58,21 @@ export async function POST(request: Request) {
     const collegeId = requireCollegeId(actor);
     const parsed = assessmentSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
+    const [offering] = await db
+      .select({
+        id: courseOfferings.id,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
+      .from(courseOfferings)
+      .where(and(eq(courseOfferings.id, parsed.data.offeringId), eq(courseOfferings.collegeId, collegeId)))
+      .limit(1);
+    if (!offering || !canAccessOffering(actor, offering.facultyUserId)) {
+      return notFound("Course offering not found.");
+    }
     const [row] = await db
       .insert(assessments)
       .values({
-        offeringId: parsed.data.offeringId,
+        offeringId: offering.id,
         collegeId,
         title: parsed.data.title,
         maxMarks: parsed.data.maxMarks,

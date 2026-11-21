@@ -1,4 +1,16 @@
 import Link from "next/link";
+import {
+  Activity,
+  BookOpen,
+  Building2,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardCheck,
+  CreditCard,
+  GraduationCap,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { clsx } from "@/lib/format";
 import { buildPageHref, totalPages } from "@/lib/pagination";
 import type { ReactNode } from "react";
@@ -50,17 +62,58 @@ export function StatCard({
   accent?: "indigo" | "cyan" | "amber" | "emerald" | "rose";
 }) {
   const tones = {
-    indigo: "from-indigo-500/15 to-transparent",
-    cyan: "from-cyan-500/15 to-transparent",
-    amber: "from-amber-500/18 to-transparent",
-    emerald: "from-emerald-500/15 to-transparent",
-    rose: "from-rose-500/15 to-transparent",
+    indigo: "bg-indigo-50 text-indigo-700",
+    cyan: "bg-cyan-50 text-cyan-700",
+    amber: "bg-amber-50 text-amber-700",
+    emerald: "bg-emerald-50 text-emerald-700",
+    rose: "bg-rose-50 text-rose-700",
   };
+  const statIcons: Record<string, typeof Activity> = {
+    Colleges: Building2,
+    "Active users": Users,
+    Users,
+    "Active students": GraduationCap,
+    Students: GraduationCap,
+    Staff: Users,
+    "Pending approvals": CheckCircle2,
+    "Unpublished results": ClipboardCheck,
+    Attendance: Activity,
+    Overall: Activity,
+    Sessions: CalendarDays,
+    "Today's classes": CalendarDays,
+    "Active courses": BookOpen,
+    "Course offerings": BookOpen,
+    "Courses tracked": BookOpen,
+    Invoices: CreditCard,
+    Outstanding: Wallet,
+    "Payments recorded": CreditCard,
+  };
+  const Icon = statIcons[label] ?? Activity;
+
   return (
-    <div className={clsx("card relative overflow-hidden p-5", "bg-gradient-to-br", tones[accent])}>
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
-      {hint ? <p className="mt-2 text-sm text-slate-500">{hint}</p> : null}
+    <div className="card group relative overflow-hidden p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl">
+      <div
+        aria-hidden="true"
+        className={clsx(
+          "pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full opacity-50 blur-2xl",
+          tones[accent],
+        )}
+      />
+      <div className="relative flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-500">{label}</p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
+        </div>
+        <span className={clsx("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", tones[accent])}>
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+      </div>
+      <div className="relative mt-4 flex min-h-5 items-center justify-between gap-3">
+        {hint ? <p className="text-sm text-slate-500">{hint}</p> : <span />}
+        <span className="shrink-0 rounded-full bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-500">
+          Snapshot
+        </span>
+      </div>
     </div>
   );
 }

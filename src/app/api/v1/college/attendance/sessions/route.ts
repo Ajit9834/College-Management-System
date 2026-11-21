@@ -4,7 +4,7 @@ import { attendanceSessions, courseOfferings } from "@/db/schema";
 import { created, notFound, ok, paginationMeta, parsePagination, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
-import { isFacultyScoped } from "@/lib/permissions";
+import { canAccessOffering, isFacultyScoped } from "@/lib/permissions";
 import { attendanceSessionSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,12 @@ export async function GET(request: Request) {
             db
               .select({ id: courseOfferings.id })
               .from(courseOfferings)
-              .where(eq(courseOfferings.facultyUserId, user.id)),
+              .where(
+                and(
+                  eq(courseOfferings.facultyUserId, user.id),
+                  eq(courseOfferings.collegeId, collegeId),
+                ),
+              ),
           )
         : undefined,
     );
@@ -55,7 +60,9 @@ export async function POST(request: Request) {
       .from(courseOfferings)
       .where(and(eq(courseOfferings.id, parsed.data.offeringId), eq(courseOfferings.collegeId, collegeId)))
       .limit(1);
-    if (!offering) return notFound("Course offering not found.");
+    if (!offering || !canAccessOffering(actor, offering.facultyUserId)) {
+      return notFound("Course offering not found.");
+    }
     const [row] = await db
       .insert(attendanceSessions)
       .values({

@@ -66,6 +66,10 @@ export function isFacultyScoped(user: AuthUser): boolean {
   return hasRole(user, ["faculty"]) && !hasRole(user, ["college_admin", "accounts_staff"]);
 }
 
+export function canAccessOffering(user: AuthUser, facultyUserId: string | null): boolean {
+  return !isFacultyScoped(user) || facultyUserId === user.id;
+}
+
 export function canManageAcademics(user: AuthUser): boolean {
   return hasRole(user, ["college_admin"]);
 }

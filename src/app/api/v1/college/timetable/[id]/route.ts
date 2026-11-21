@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { timetableEntries } from "@/db/schema";
+import { courseOfferings, timetableEntries } from "@/db/schema";
 import { notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
 import { findTimetableConflict } from "@/lib/data";
+import { canAccessOffering } from "@/lib/permissions";
 import { timetableUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +21,25 @@ export async function PATCH(
     const parsed = timetableUpdateSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
 
-    const [existing] = await db
-      .select()
+    const [entryRow] = await db
+      .select({
+        entry: timetableEntries,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
       .from(timetableEntries)
-      .where(and(eq(timetableEntries.id, id), eq(timetableEntries.collegeId, collegeId)))
+      .innerJoin(courseOfferings, eq(courseOfferings.id, timetableEntries.offeringId))
+      .where(
+        and(
+          eq(timetableEntries.id, id),
+          eq(timetableEntries.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
+        ),
+      )
       .limit(1);
-    if (!existing) return notFound("Timetable slot not found.");
+    if (!entryRow || !canAccessOffering(actor, entryRow.facultyUserId)) {
+      return notFound("Timetable slot not found.");
+    }
+    const existing = entryRow.entry;
 
     const startsAt = parsed.data.startsAt ?? existing.startsAt;
     const endsAt = parsed.data.endsAt ?? existing.endsAt;
@@ -81,11 +95,23 @@ export async function DELETE(
     const collegeId = requireCollegeId(actor);
     const { id } = await context.params;
     const [existing] = await db
-      .select()
+      .select({
+        id: timetableEntries.id,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
       .from(timetableEntries)
-      .where(and(eq(timetableEntries.id, id), eq(timetableEntries.collegeId, collegeId)))
+      .innerJoin(courseOfferings, eq(courseOfferings.id, timetableEntries.offeringId))
+      .where(
+        and(
+          eq(timetableEntries.id, id),
+          eq(timetableEntries.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
+        ),
+      )
       .limit(1);
-    if (!existing) return notFound("Timetable slot not found.");
+    if (!existing || !canAccessOffering(actor, existing.facultyUserId)) {
+      return notFound("Timetable slot not found.");
+    }
     await db.delete(timetableEntries).where(eq(timetableEntries.id, id));
     await writeAudit({
       actor,

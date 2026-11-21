@@ -3,10 +3,10 @@ import { PageHeader, Pagination } from "@/components/ui";
 import { JsonForm } from "@/components/forms";
 import { requireCollegePage } from "@/lib/guard";
 import { listCollegeStudents } from "@/lib/data";
-import { canManageAcademics, primaryCollegeId } from "@/lib/permissions";
+import { canManageAcademics, isFacultyScoped, primaryCollegeId } from "@/lib/permissions";
 import { db } from "@/db";
 import { courseEnrollments, courseOfferings, courses, students, users } from "@/db/schema";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { normalizePagination } from "@/lib/pagination";
 import { redirect } from "next/navigation";
 
@@ -22,7 +22,10 @@ export default async function EnrollmentsPage({
   if (!collegeId) redirect("/access-denied");
   const { page: pageParam } = await searchParams;
   const { page, pageSize, offset } = normalizePagination({ page: pageParam });
-  const where = eq(courseOfferings.collegeId, collegeId);
+  const where = and(
+    eq(courseOfferings.collegeId, collegeId),
+    isFacultyScoped(user) ? eq(courseOfferings.facultyUserId, user.id) : undefined,
+  );
   const [offerings, studentRows, enrollmentRows, counted] = await Promise.all([
     db
       .select({
@@ -35,7 +38,7 @@ export default async function EnrollmentsPage({
       .from(courseOfferings)
       .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
       .where(where),
-    listCollegeStudents(collegeId),
+    listCollegeStudents(collegeId, undefined, isFacultyScoped(user) ? user.id : undefined),
     db
       .select({
         id: courseEnrollments.id,
@@ -46,10 +49,10 @@ export default async function EnrollmentsPage({
       })
       .from(courseEnrollments)
       .innerJoin(courseOfferings, eq(courseOfferings.id, courseEnrollments.offeringId))
-      .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
       .innerJoin(students, eq(students.id, courseEnrollments.studentId))
+      .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
       .innerJoin(users, eq(users.id, students.userId))
-      .where(where)
+      .where(and(where, eq(students.collegeId, collegeId)))
       .orderBy(asc(courseEnrollments.id))
       .limit(pageSize)
       .offset(offset),
@@ -57,7 +60,8 @@ export default async function EnrollmentsPage({
       .select({ count: sql<number>`count(*)::int` })
       .from(courseEnrollments)
       .innerJoin(courseOfferings, eq(courseOfferings.id, courseEnrollments.offeringId))
-      .where(where),
+      .innerJoin(students, eq(students.id, courseEnrollments.studentId))
+      .where(and(where, eq(students.collegeId, collegeId))),
   ]);
   const total = counted?.[0]?.count ?? 0;
 

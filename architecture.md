@@ -184,7 +184,7 @@ The Supabase service-role key must not be used by browser code. When email deliv
 - Install dependencies with `npm install`.
 - Set required environment variables and provide a PostgreSQL database.
 - Apply the Drizzle schema using the repository's documented `npx drizzle-kit push` workflow.
-- Initial demo data can be seeded when the user table is empty. The student data helper can synchronize enrollments for matching active offerings.
+- Initial demo data is seeded on first request only in development and only when the user table is empty. Production requests never seed demo accounts; provision a production administrator through a controlled setup process. The student data helper can synchronize enrollments for matching active offerings.
 - Run locally with `npm run dev`; production uses `npm run build` and `npm run start`.
 - Deploy the Next.js application and PostgreSQL database as managed services appropriate to the deployment environment.
 

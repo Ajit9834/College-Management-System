@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { ConfirmButton, JsonForm } from "@/components/forms";
 import { requireCollegePage } from "@/lib/guard";
-import { canManageTimetable, primaryCollegeId } from "@/lib/permissions";
+import { canAccessOffering, canManageTimetable, primaryCollegeId } from "@/lib/permissions";
 import { db } from "@/db";
 import { courseOfferings, courses, timetableEntries } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -21,23 +21,31 @@ export default async function TimetableEditPage({
   if (!collegeId) redirect("/access-denied");
   const { id } = await params;
   const [row] = await db
-    .select()
+    .select({
+      entry: timetableEntries,
+      facultyUserId: courseOfferings.facultyUserId,
+      code: courses.code,
+      title: courses.title,
+    })
     .from(timetableEntries)
-    .where(and(eq(timetableEntries.id, id), eq(timetableEntries.collegeId, collegeId)))
-    .limit(1);
-  if (!row) notFound();
-  const [course] = await db
-    .select({ code: courses.code, title: courses.title })
-    .from(courseOfferings)
+    .innerJoin(courseOfferings, eq(courseOfferings.id, timetableEntries.offeringId))
     .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
-    .where(eq(courseOfferings.id, row.offeringId))
+    .where(
+      and(
+        eq(timetableEntries.id, id),
+        eq(timetableEntries.collegeId, collegeId),
+        eq(courseOfferings.collegeId, collegeId),
+      ),
+    )
     .limit(1);
+  if (!row || !canAccessOffering(user, row.facultyUserId)) notFound();
+  const entry = row.entry;
 
   return (
     <div>
       <PageHeader
         title="Timetable slot"
-        description={course ? `${course.code} · ${course.title}` : undefined}
+        description={`${row.code} · ${row.title}`}
       />
       <Link href="/college/timetable" className="mb-4 inline-block text-sm text-indigo-600">
         ← Back to timetable
@@ -46,7 +54,7 @@ export default async function TimetableEditPage({
         <section className="card max-w-2xl p-5">
           <h2 className="mb-4 font-semibold">Edit slot</h2>
           <JsonForm
-            action={`/api/v1/college/timetable/${row.id}`}
+            action={`/api/v1/college/timetable/${entry.id}`}
             method="PATCH"
             submitLabel="Save changes"
             successMessage="Timetable updated."
@@ -54,7 +62,7 @@ export default async function TimetableEditPage({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <label className="label" htmlFor="weekday">Weekday</label>
-                <select id="weekday" name="weekday" className="select" defaultValue={row.weekday}>
+                <select id="weekday" name="weekday" className="select" defaultValue={entry.weekday}>
                   {[1, 2, 3, 4, 5, 6, 7].map((d) => (
                     <option key={d} value={d}>{weekdayName(d)}</option>
                   ))}
@@ -62,15 +70,15 @@ export default async function TimetableEditPage({
               </div>
               <div>
                 <label className="label" htmlFor="startsAt">Starts</label>
-                <input id="startsAt" name="startsAt" className="input" defaultValue={row.startsAt} required />
+                <input id="startsAt" name="startsAt" className="input" defaultValue={entry.startsAt} required />
               </div>
               <div>
                 <label className="label" htmlFor="endsAt">Ends</label>
-                <input id="endsAt" name="endsAt" className="input" defaultValue={row.endsAt} required />
+                <input id="endsAt" name="endsAt" className="input" defaultValue={entry.endsAt} required />
               </div>
               <div className="md:col-span-2">
                 <label className="label" htmlFor="room">Room</label>
-                <input id="room" name="room" className="input" defaultValue={row.room ?? ""} />
+                <input id="room" name="room" className="input" defaultValue={entry.room ?? ""} />
               </div>
             </div>
           </JsonForm>
@@ -85,7 +93,7 @@ export default async function TimetableEditPage({
             Permanently removes this timetable slot. This cannot be undone.
           </p>
           <ConfirmButton
-            action={`/api/v1/college/timetable/${row.id}`}
+            action={`/api/v1/college/timetable/${entry.id}`}
             method="DELETE"
             variant="danger"
             label="Delete slot"

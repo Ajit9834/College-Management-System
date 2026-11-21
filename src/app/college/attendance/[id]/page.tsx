@@ -3,10 +3,23 @@ import { notFound, redirect } from "next/navigation";
 import { PageHeader, StatusBadge } from "@/components/ui";
 import { ConfirmButton, JsonForm } from "@/components/forms";
 import { requireCollegePage } from "@/lib/guard";
-import { canRecordAttendance, primaryCollegeId } from "@/lib/permissions";
+import {
+  canAccessOffering,
+  canRecordAttendance,
+  isFacultyScoped,
+  primaryCollegeId,
+} from "@/lib/permissions";
 import { db } from "@/db";
-import { attendanceRecords, attendanceSessions, courseOfferings, courses, students, users } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import {
+  attendanceRecords,
+  attendanceSessions,
+  courseEnrollments,
+  courseOfferings,
+  courses,
+  students,
+  users,
+} from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +40,20 @@ export default async function AttendanceSessionEditPage({
       topic: attendanceSessions.topic,
       courseCode: courses.code,
       courseTitle: courses.title,
+      facultyUserId: courseOfferings.facultyUserId,
     })
     .from(attendanceSessions)
     .innerJoin(courseOfferings, eq(courseOfferings.id, attendanceSessions.offeringId))
     .innerJoin(courses, eq(courses.id, courseOfferings.courseId))
-    .where(and(eq(attendanceSessions.id, id), eq(attendanceSessions.collegeId, collegeId)))
+    .where(
+      and(
+        eq(attendanceSessions.id, id),
+        eq(attendanceSessions.collegeId, collegeId),
+        eq(courseOfferings.collegeId, collegeId),
+      ),
+    )
     .limit(1);
-  if (!row) notFound();
+  if (!row || !canAccessOffering(user, row.facultyUserId)) notFound();
 
   const records = await db
     .select({
@@ -46,7 +66,21 @@ export default async function AttendanceSessionEditPage({
     .from(attendanceRecords)
     .innerJoin(students, eq(students.id, attendanceRecords.studentId))
     .innerJoin(users, eq(users.id, students.userId))
-    .where(eq(attendanceRecords.sessionId, row.id))
+    .where(
+      and(
+        eq(attendanceRecords.sessionId, row.id),
+        eq(students.collegeId, collegeId),
+        isFacultyScoped(user)
+          ? inArray(
+              attendanceRecords.studentId,
+              db
+                .select({ studentId: courseEnrollments.studentId })
+                .from(courseEnrollments)
+                .where(eq(courseEnrollments.offeringId, row.offeringId)),
+            )
+          : undefined,
+      ),
+    )
     .orderBy(users.fullName);
 
   return (

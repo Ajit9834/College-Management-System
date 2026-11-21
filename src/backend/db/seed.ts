@@ -732,6 +732,7 @@ async function seedOnce() {
 }
 
 export async function ensureSeeded() {
+  if (process.env.NODE_ENV !== "development") return;
   if (!globalForSeed.__campusflowSeedPromise) {
     globalForSeed.__campusflowSeedPromise = seedOnce().catch((error) => {
       globalForSeed.__campusflowSeedPromise = undefined;

@@ -87,7 +87,7 @@ npm install
 npx drizzle-kit push
 ```
 
-Demo data is seeded on first load when the user table is empty.
+Demo data is seeded on first request in development only, when the user table is empty. Production does not create demo accounts; provision an administrator through a controlled setup process.
 The student dashboard automatically enrolls active students in active offerings matching their college, department, semester, and academic year.
 
 4. Start the development server:
@@ -105,7 +105,7 @@ Student portal:
 - Email: `arjun.student@riverside.edu`
 - Password: `StudentPass!23`
 
-Sign in at `/login` to view the seeded student dashboard data. Demo accounts are created on first load only when the user table is empty.
+Sign in at `/login` in development to view the seeded student dashboard data. Demo accounts are created only in development when the user table is empty.
 
 
 ## Available scripts

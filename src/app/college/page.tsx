@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader, StatCard } from "@/components/ui";
 import { requireCollegePage } from "@/lib/guard";
 import { collegeDashboardStats, listCollegeStudents, listNoticesForUser } from "@/lib/data";
-import { primaryCollegeId } from "@/lib/permissions";
+import { isFacultyScoped, primaryCollegeId } from "@/lib/permissions";
 import { db } from "@/db";
 import { assessments, colleges } from "@/db/schema";
 import { and, desc, eq } from "drizzle-orm";
@@ -19,7 +19,7 @@ export default async function CollegeDashboard() {
   const [stats, college, students, notices, drafts] = await Promise.all([
     collegeDashboardStats(collegeId),
     db.select().from(colleges).where(eq(colleges.id, collegeId)).then((rows) => rows[0]),
-    listCollegeStudents(collegeId),
+    listCollegeStudents(collegeId, undefined, isFacultyScoped(user) ? user.id : undefined),
     listNoticesForUser(user),
     db
       .select()

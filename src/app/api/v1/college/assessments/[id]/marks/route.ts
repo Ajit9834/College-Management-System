@@ -1,10 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { assessments, results, students } from "@/db/schema";
+import { assessments, courseEnrollments, courseOfferings, results, students } from "@/db/schema";
 import { notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, HttpError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
-import { computeGrade } from "@/lib/permissions";
+import { canAccessOffering, computeGrade, isFacultyScoped } from "@/lib/permissions";
 import { resultMarksSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +20,25 @@ export async function PUT(
     const parsed = resultMarksSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
 
-    const [assessment] = await db
-      .select()
+    const [row] = await db
+      .select({
+        assessment: assessments,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
       .from(assessments)
-      .where(and(eq(assessments.id, id), eq(assessments.collegeId, collegeId)))
+      .innerJoin(courseOfferings, eq(courseOfferings.id, assessments.offeringId))
+      .where(
+        and(
+          eq(assessments.id, id),
+          eq(assessments.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
+        ),
+      )
       .limit(1);
-    if (!assessment) return notFound("Assessment not found.");
+    if (!row || !canAccessOffering(actor, row.facultyUserId)) {
+      return notFound("Assessment not found.");
+    }
+    const assessment = row.assessment;
 
     for (const mark of parsed.data.marks) {
       if (mark.marks > assessment.maxMarks) {
@@ -34,6 +47,27 @@ export async function PUT(
           "VALIDATION_ERROR",
           `Marks cannot exceed ${assessment.maxMarks}.`,
         );
+      }
+    }
+
+    if (isFacultyScoped(actor)) {
+      const studentIds = [...new Set(parsed.data.marks.map((mark) => mark.studentId))];
+      const enrolled = studentIds.length
+        ? await db
+            .select({ studentId: courseEnrollments.studentId })
+            .from(courseEnrollments)
+            .innerJoin(students, eq(students.id, courseEnrollments.studentId))
+            .where(
+              and(
+                eq(courseEnrollments.offeringId, assessment.offeringId),
+                eq(students.collegeId, collegeId),
+                inArray(courseEnrollments.studentId, studentIds),
+              ),
+            )
+        : [];
+      const enrolledStudentIds = new Set(enrolled.map((row) => row.studentId));
+      if (studentIds.some((studentId) => !enrolledStudentIds.has(studentId))) {
+        return validationError("Marks can only be entered for students enrolled in this offering.");
       }
     }
 

@@ -1,9 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { assessments, results } from "@/db/schema";
-import { notFound, ok, validationError } from "@/lib/api";
+import { assessments, courseOfferings, results } from "@/db/schema";
+import { forbidden, notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
+import { canAccessOffering, canPublishResults } from "@/lib/permissions";
 import { assessmentUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -18,13 +19,28 @@ export async function PATCH(
     const { id } = await context.params;
     const parsed = assessmentUpdateSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
-
-    const [existing] = await db
-      .select()
+    const [assessmentRow] = await db
+      .select({
+        assessment: assessments,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
       .from(assessments)
-      .where(and(eq(assessments.id, id), eq(assessments.collegeId, collegeId)))
+      .innerJoin(courseOfferings, eq(courseOfferings.id, assessments.offeringId))
+      .where(
+        and(
+          eq(assessments.id, id),
+          eq(assessments.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
+        ),
+      )
       .limit(1);
-    if (!existing) return notFound("Assessment not found.");
+    if (!assessmentRow || !canAccessOffering(actor, assessmentRow.facultyUserId)) {
+      return notFound("Assessment not found.");
+    }
+    if (parsed.data.publishStatus !== undefined && !canPublishResults(actor)) {
+      return forbidden("Only college administrators can change result visibility.");
+    }
+    const existing = assessmentRow.assessment;
 
     const nextStatus = parsed.data.publishStatus ?? existing.publishStatus;
     const now = new Date();
@@ -88,12 +104,25 @@ export async function DELETE(
     const actor = await apiRequire(["college_admin", "faculty"]);
     const collegeId = requireCollegeId(actor);
     const { id } = await context.params;
-    const [existing] = await db
-      .select()
+    const [assessmentRow] = await db
+      .select({
+        assessment: assessments,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
       .from(assessments)
-      .where(and(eq(assessments.id, id), eq(assessments.collegeId, collegeId)))
+      .innerJoin(courseOfferings, eq(courseOfferings.id, assessments.offeringId))
+      .where(
+        and(
+          eq(assessments.id, id),
+          eq(assessments.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
+        ),
+      )
       .limit(1);
-    if (!existing) return notFound("Assessment not found.");
+    if (!assessmentRow || !canAccessOffering(actor, assessmentRow.facultyUserId)) {
+      return notFound("Assessment not found.");
+    }
+    const existing = assessmentRow.assessment;
     await db.delete(assessments).where(eq(assessments.id, id));
     await writeAudit({
       actor,

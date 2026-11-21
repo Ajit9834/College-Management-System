@@ -1,9 +1,16 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { attendanceRecords, attendanceSessions, students } from "@/db/schema";
+import {
+  attendanceRecords,
+  attendanceSessions,
+  courseEnrollments,
+  courseOfferings,
+  students,
+} from "@/db/schema";
 import { notFound, ok, validationError } from "@/lib/api";
 import { apiRequire, handleApiError, requireCollegeId } from "@/lib/api-auth";
 import { writeAudit } from "@/lib/audit";
+import { canAccessOffering, isFacultyScoped } from "@/lib/permissions";
 import { attendanceRecordsSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
@@ -20,11 +27,45 @@ export async function PUT(
     if (!parsed.success) return validationError(parsed.error);
 
     const [session] = await db
-      .select()
+      .select({
+        id: attendanceSessions.id,
+        offeringId: attendanceSessions.offeringId,
+        facultyUserId: courseOfferings.facultyUserId,
+      })
       .from(attendanceSessions)
-      .where(and(eq(attendanceSessions.id, id), eq(attendanceSessions.collegeId, collegeId)))
+      .innerJoin(courseOfferings, eq(courseOfferings.id, attendanceSessions.offeringId))
+      .where(
+        and(
+          eq(attendanceSessions.id, id),
+          eq(attendanceSessions.collegeId, collegeId),
+          eq(courseOfferings.collegeId, collegeId),
+        ),
+      )
       .limit(1);
-    if (!session) return notFound("Attendance session not found.");
+    if (!session || !canAccessOffering(actor, session.facultyUserId)) {
+      return notFound("Attendance session not found.");
+    }
+
+    if (isFacultyScoped(actor)) {
+      const studentIds = [...new Set(parsed.data.records.map((record) => record.studentId))];
+      const enrolled = studentIds.length
+        ? await db
+            .select({ studentId: courseEnrollments.studentId })
+            .from(courseEnrollments)
+            .innerJoin(students, eq(students.id, courseEnrollments.studentId))
+            .where(
+              and(
+                eq(courseEnrollments.offeringId, session.offeringId),
+                eq(students.collegeId, collegeId),
+                inArray(courseEnrollments.studentId, studentIds),
+              ),
+            )
+        : [];
+      const enrolledStudentIds = new Set(enrolled.map((row) => row.studentId));
+      if (studentIds.some((studentId) => !enrolledStudentIds.has(studentId))) {
+        return validationError("Attendance can only be recorded for students enrolled in this offering.");
+      }
+    }
 
     await db.transaction(async (tx) => {
       for (const record of parsed.data.records) {

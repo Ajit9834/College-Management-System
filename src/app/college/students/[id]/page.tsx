@@ -2,8 +2,13 @@ import { notFound } from "next/navigation";
 import { PageHeader, StatusBadge } from "@/components/ui";
 import { JsonForm, ConfirmButton, UploadField } from "@/components/forms";
 import { requireCollegePage } from "@/lib/guard";
-import { getStudentById, listStudentAttendance, listStudentCourses, listStudentFees, listStudentResults, listUploadNames } from "@/lib/data";
-import { canAccessCollege, canManageStudents } from "@/lib/permissions";
+import { getStudentById, isStudentTaughtByFaculty, listStudentAttendance, listStudentCourses, listStudentFees, listStudentResults, listUploadNames } from "@/lib/data";
+import {
+  canAccessCollege,
+  canManageFees,
+  canManageStudents,
+  isFacultyScoped,
+} from "@/lib/permissions";
 import { formatMoney } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +22,15 @@ export default async function CollegeStudentDetail({
   const { id } = await params;
   const row = await getStudentById(id);
   if (!row || !canAccessCollege(user, row.student.collegeId)) notFound();
+  if (isFacultyScoped(user) && !(await isStudentTaughtByFaculty(row.student.id, user.id))) notFound();
 
+  const facultyUserId = isFacultyScoped(user) ? user.id : undefined;
+  const showFees = canManageFees(user);
   const [courses, attendance, results, fees] = await Promise.all([
-    listStudentCourses(row.student.id),
-    listStudentAttendance(row.student.id),
-    listStudentResults(row.student.id),
-    listStudentFees(row.student.id),
+    listStudentCourses(row.student.id, facultyUserId),
+    listStudentAttendance(row.student.id, facultyUserId),
+    listStudentResults(row.student.id, facultyUserId),
+    showFees ? listStudentFees(row.student.id) : Promise.resolve(null),
   ]);
   const photoNames = row.student.photoId
     ? await listUploadNames([row.student.photoId])
@@ -132,19 +140,21 @@ export default async function CollegeStudentDetail({
             ))}
           </ul>
         </section>
-        <section className="card p-5">
-          <h2 className="mb-3 font-semibold">Fees</h2>
-          <ul className="space-y-2 text-sm">
-            {fees.invoices.map((i) => (
-              <li key={i.id} className="flex justify-between">
-                <span>{i.title}</span>
-                <span>
-                  {formatMoney(i.amount)} · {i.status.replaceAll("_", " ")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        {fees ? (
+          <section className="card p-5">
+            <h2 className="mb-3 font-semibold">Fees</h2>
+            <ul className="space-y-2 text-sm">
+              {fees.invoices.map((i) => (
+                <li key={i.id} className="flex justify-between">
+                  <span>{i.title}</span>
+                  <span>
+                    {formatMoney(i.amount)} · {i.status.replaceAll("_", " ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <section className="card p-5">
           <h2 className="mb-3 font-semibold">Attendance sessions</h2>
           <p className="text-sm text-slate-600">{attendance.records.length} records on file.</p>
